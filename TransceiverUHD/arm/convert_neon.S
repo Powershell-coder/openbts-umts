@@ -1,6 +1,7 @@
 /*
  * NEON type conversions
  * Copyright (C) 2012, 2013 Thomas Tsou <tom@tsou.cc>
+ * Copyright (C) 2015 Ettus Research
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -39,12 +40,14 @@ neon_convert_ps_si16_4n:
 	.global neon_convert_si16_ps_4n
 	.type neon_convert_si16_ps_4n, %function
 neon_convert_si16_ps_4n:
+	vld1.32          {q2}, [r2]
 .loop_intflt:
 	vld1.64          {d0}, [r1]!
 	vmovl.s16          q1, d0
 	vcvt.f32.s32       q0, q1
+	vmul.f32           q0, q2
 	vst1.64          {q0}, [r0]!
-	subs               r2, #1
+	subs               r3, #1
 	bne          .loop_intflt
         bx                 lr
 	.size neon_convert_si16_ps_4n, .-neon_convert_si16_ps_4n

@@ -1,6 +1,7 @@
 /*
  * NEON Convolution
  * Copyright (C) 2012, 2013 Thomas Tsou <tom@tsou.cc>
+ * Copyright (C) 2015 Ettus Research 
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,10 +22,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* Forward declarations from base implementation */
 int _base_convolve_real(float *x, int x_len,
 			float *h, int h_len,
@@ -41,7 +38,6 @@ int _base_convolve_complex(float *x, int x_len,
 int _bounds_check(int x_len, int h_len, int y_len,
 		  int start, int len, int step);
 
-#ifdef HAVE_NEON
 /* Calls into NEON assembler */
 void neon_conv_real4(float *x, float *h, float *y, int len);
 void neon_conv_real8(float *x, float *h, float *y, int len);
@@ -56,7 +52,6 @@ static void neon_conv_cmplx_4n(float *x, float *h, float *y, int h_len, int len)
 	for (int i = 0; i < len; i++)
 		mac_cx_neon4(&x[2 * i], h, &y[2 * i], h_len >> 2);
 }
-#endif
 
 /* API: Aligned complex-real */
 int convolve_real(float *x, int x_len,
@@ -72,7 +67,6 @@ int convolve_real(float *x, int x_len,
 
 	memset(y, 0, len * 2 * sizeof(float));
 
-#ifdef HAVE_NEON
 	if (step <= 4) {
 		switch (h_len) {
 		case 4:
@@ -92,7 +86,7 @@ int convolve_real(float *x, int x_len,
 			break;
 		}
 	}
-#endif
+
 	if (conv_func) {
 		conv_func(&x[2 * (-(h_len - 1) + start)],
 			  h, y, len);
@@ -121,10 +115,9 @@ int convolve_complex(float *x, int x_len,
 
 	memset(y, 0, len * 2 * sizeof(float));
 
-#ifdef HAVE_NEON
 	if (step <= 4 && !(h_len % 4))
 		conv_func = neon_conv_cmplx_4n;
-#endif
+
 	if (conv_func) {
 		conv_func(&x[2 * (-(h_len - 1) + start)],
 			  h, y, h_len, len);

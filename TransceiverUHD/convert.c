@@ -24,6 +24,8 @@
 #include "config.h"
 #endif
 
+#ifndef HAVE_NEON
+
 #ifdef HAVE_SSE3
 #include <xmmintrin.h>
 #include <emmintrin.h>
@@ -207,3 +209,4 @@ void convert_short_float(float *out, short *in, float scale, int len)
 	convert_si16_ps(out, in, scale, len);
 #endif
 }
+#endif /* HAVE_NEON */
