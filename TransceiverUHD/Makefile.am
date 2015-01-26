@@ -1,6 +1,11 @@
 if HAVE_UHD
 include $(top_srcdir)/Makefile.common
 
+if ARCH_ARM
+SUBDIRS = arm
+ARCH_LA = arm/libarch.la
+endif
+
 noinst_LTLIBRARIES = libumtstransceiver.la
 noinst_PROGRAMS = transceiver
 noinst_HEADERS = \
@@ -26,7 +31,7 @@ libumtstransceiver_la_SOURCES = \
 	convert.c
 
 transceiver_SOURCES = runTransceiver.cpp ../apps/GetConfigurationKeys.cpp
-transceiver_LDADD = libumtstransceiver.la $(UHD_LIBS) $(UMTS_LA) $(GSM_LA) $(COMMON_LA) $(SQLITE_LA)
+transceiver_LDADD = libumtstransceiver.la $(UHD_LIBS) $(UMTS_LA) $(GSM_LA) $(COMMON_LA) $(SQLITE_LA) $(ARCH_LA)
 
 install: transceiver
 	mkdir -p "$(DESTDIR)/OpenBTS/"

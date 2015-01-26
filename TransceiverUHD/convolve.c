@@ -491,7 +491,7 @@ static void sse_conv_cmplx_8n(float *x, float *h, float *y, int h_len, int len)
 		_mm_store_ss(&y[2 * i + 1], m2);
 	}
 }
-#endif
+#endif /* HAVE_SSE3 */
 
 /* Base multiply and accumulate complex-real */
 static void mac_real(float *x, float *h, float *y)
@@ -541,11 +541,11 @@ static int _base_convolve_real(float *x, int x_len,
 }
 
 /* Base complex-complex convolution */
-static int _base_convolve_complex(float *x, int x_len,
-				  float *h, int h_len,
-				  float *y, int y_len,
-				  int start, int len,
-				  int step, int offset)
+int _base_convolve_complex(float *x, int x_len,
+			   float *h, int h_len,
+			   float *y, int y_len,
+			   int start, int len,
+			   int step, int offset)
 {
 	for (int i = 0; i < len; i++) {
 		mac_cmplx_vec_n(&x[2 * (i - (h_len - 1) + start)],
@@ -558,8 +558,8 @@ static int _base_convolve_complex(float *x, int x_len,
 }
 
 /* Buffer validity checks */
-static int bounds_check(int x_len, int h_len, int y_len,
-			int start, int len, int step)
+int _bounds_check(int x_len, int h_len, int y_len,
+		  int start, int len, int step)
 {
 	if ((x_len < 1) || (h_len < 1) ||
 	    (y_len < 1) || (len < 1) || (step < 1)) {
@@ -587,7 +587,7 @@ int convolve_real(float *x, int x_len,
 	void (*conv_func)(float *, float *, float *, int) = NULL;
 	void (*conv_func_n)(float *, float *, float *, int, int) = NULL;
 
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (_bounds_check(x_len, h_len, y_len, start, len, step) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
@@ -641,7 +641,7 @@ int convolve_complex(float *x, int x_len,
 {
 	void (*conv_func)(float *, float *, float *, int, int) = NULL;
 
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (_bounds_check(x_len, h_len, y_len, start, len, step) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
@@ -674,7 +674,7 @@ int base_convolve_real(float *x, int x_len,
 		       int start, int len,
 		       int step, int offset)
 {
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (_bounds_check(x_len, h_len, y_len, start, len, step) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
@@ -692,7 +692,7 @@ int base_convolve_complex(float *x, int x_len,
 			  int start, int len,
 			  int step, int offset)
 {
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (_bounds_check(x_len, h_len, y_len, start, len, step) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));

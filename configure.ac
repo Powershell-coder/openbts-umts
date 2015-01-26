@@ -53,6 +53,28 @@ AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_C_BIGENDIAN
 
+AC_ARG_WITH(neon, [
+    AS_HELP_STRING([--with-neon],
+        [enable ARM NEON support])
+])
+
+AC_ARG_WITH(neon-vfpv4, [
+    AS_HELP_STRING([--with-neon-vfpv4],
+        [enable ARM NEON FMA support])
+])
+
+AS_IF([test "x$with_neon" = "xyes"], [
+    AC_DEFINE(HAVE_NEON, 1, Support ARM NEON)
+])
+
+AS_IF([test "x$with_neon_vfpv4" = "xyes"], [
+    AC_DEFINE(HAVE_NEON, 1, Support ARM NEON)
+    AC_DEFINE(HAVE_NEON_FMA, 1, Support ARM NEON with FMA)
+])
+
+AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
+AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
+
 dnl Check for libzmq
 if test ! -r "/usr/include/zmq.h" -a ! -r "/usr/local/include/zmq.h"; then
     AC_MSG_ERROR([/usr/local/include/zmq.h not found. Install the range-libzmq package or manually build and install with $ sudo ./NodeManager/install_libzmq.sh])
@@ -109,6 +131,7 @@ AC_CONFIG_FILES([\
     SMS/Makefile \
     TransceiverRAD1/Makefile \
     TransceiverUHD/Makefile \
+    TransceiverUHD/arm/Makefile \
     TRXManager/Makefile \
     CLI/Makefile \
     NodeManager/Makefile \
