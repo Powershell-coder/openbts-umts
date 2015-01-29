@@ -28,7 +28,7 @@ SampleBuffer::SampleBuffer(int len, double rate)
 	  data_start(0), data_end(0)
 {
 	this->len = len;
-	data = new std::complex<short>[len];
+	data = new std::complex<char>[len];
 }
 
 SampleBuffer::~SampleBuffer()
@@ -53,7 +53,7 @@ int SampleBuffer::avail_smpls(uhd::time_spec_t ts) const
 
 int SampleBuffer::read(void *buf, int len, long long ts)
 {
-	int type_size = sizeof(std::complex<short>);
+	int type_size = sizeof(std::complex<char>);
 
 	/* Check for valid read */
 	if (ts < time_start)
@@ -99,7 +99,7 @@ int SampleBuffer::read(void *buf, int len, uhd::time_spec_t ts)
 
 int SampleBuffer::write(void *buf, int len, long long ts)
 {
-	int type_size = sizeof(std::complex<short>);
+	int type_size = sizeof(std::complex<char>);
 
 	/* Check for valid write */
 	if ((len == 0) || (len >= this->len))

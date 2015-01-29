@@ -40,7 +40,7 @@ public:
 	};
 
 private:
-	std::complex<short> *data;
+	std::complex<char> *data;
 	int len;
 	double clock_rate;
 

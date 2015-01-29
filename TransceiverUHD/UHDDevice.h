@@ -29,10 +29,10 @@ public:
 	void setPriority();
 	enum TxWindowType getWindowType() { return tx_window; }
 
-	int readSamples(short *buf, int len, bool *overrun,
+	int readSamples(char *buf, int len, bool *overrun,
 			long long timestamp, bool *underrun, unsigned *RSSI);
 
-	int writeSamples(short *buf, int len,
+	int writeSamples(char *buf, int len,
 			 bool *underrun, long long timestamp);
 
         bool setVCTCXO(unsigned int) { return true; };

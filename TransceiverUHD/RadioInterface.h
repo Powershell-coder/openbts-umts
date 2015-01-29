@@ -1,7 +1,7 @@
 #ifndef __RADIOINTERFACE_H__
 #define __RADIOINTERFACE_H__
 
-#include "signalVector.h"
+#include "charVector.h"
 #include "LinkedLists.h"
 #include "RadioDevice.h"
 #include "Resampler.h"
@@ -10,17 +10,17 @@
 #include <Interthread.h>
 
 /** class used to organize UMTS bursts by UMTS timestamps */
-class radioVector : public signalVector {
+class radioVector : public charVector {
 private:
   UMTS::Time mTime;   ///< the burst's UMTS timestamp 
 
 public:
   /** constructor */
-  radioVector(const signalVector& wVector,
-              UMTS::Time& wTime): signalVector(wVector),mTime(wTime) { };
+  radioVector(const charVector& wVector,
+              UMTS::Time& wTime): charVector(wVector),mTime(wTime) { };
 
   radioVector(unsigned wSz, UMTS::Time& wTime)
-    : signalVector(wSz), mTime(wTime) { };
+    : charVector(wSz), mTime(wTime) { };
 
   /** timestamp read and write operators */
   UMTS::Time time() const { return mTime; }
@@ -149,24 +149,24 @@ private:
   /** digital scaling attenuation factor */
   double powerScaling;
 
-  signalVector *finalVec;
+  charVector *finalVec;
 
   Resampler *upsampler;
   Resampler *dnsampler;
 
-  signalVector *innerSendBuffer;
-  signalVector *innerRecvBuffer;
-  signalVector *outerSendBuffer;
-  signalVector *outerRecvBuffer;
+  charVector *innerSendBuffer;
+  charVector *innerRecvBuffer;
+  charVector *outerSendBuffer;
+  charVector *outerRecvBuffer;
 
-  short *convertSendBuffer;
-  short *convertRecvBuffer;
+  int8_t *convertSendBuffer;
+  int8_t *convertRecvBuffer;
 
   /** format samples to USRP */
-  int radioifyVector(signalVector &wVector, float *shortVector, bool zero);
+  int radioifyVector(charVector &in, char *out, bool zero);
 
   /** format samples from USRP */
-  void unRadioifyVector(float *floatVector, signalVector &wVector);
+  void unRadioifyVector(char *out, charVector &in);
 
   /** push UMTS bursts into the transmit buffer */
   bool pushBuffer(void);
@@ -227,7 +227,7 @@ public:
   bool tuneRx(double freq);
 
   /** drive transmission of UMTS bursts */
-  void driveTransmitRadio(signalVector &radioBurst, bool zeroBurst);
+  void driveTransmitRadio(radioVector &radioBurst, bool zeroBurst);
 
   /** drive reception of UMTS bursts */
   void driveReceiveRadio(int guardPeriod = 0);

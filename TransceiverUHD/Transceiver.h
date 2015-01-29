@@ -42,7 +42,7 @@ private:
   RadioInterface *mRadioInterface; ///< associated radioInterface object
 
   /** modulate and add a burst to the transmit queue */
-  void addRadioVector(signalVector &burst, UMTS::Time &wTime);
+  void addRadioVector(charVector &burst, UMTS::Time &wTime);
 
   /** Push modulated burst into transmit FIFO corresponding to a particular timestamp */
   void pushRadioVector(UMTS::Time &nowTime);

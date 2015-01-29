@@ -134,6 +134,7 @@ public:
 //@{
 typedef Complex<float> complex;
 typedef Complex<double> dcomplex;
+typedef Complex<char> complex8;
 typedef Complex<short> complex16;
 typedef Complex<long> complex32;
 //@}

@@ -36,9 +36,9 @@ Transceiver::Transceiver(int wBasePort,
     mControlServiceLoopThread(NULL), mOn(false), mPower(DEFAULT_ATTEN),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface)
 {
-  signalVector emptyVector(UMTS::gSlotLen);
+  charVector emptyVector(UMTS::gSlotLen);
   UMTS::Time emptyTime(0, 0);
-  mEmptyTransmitBurst = new radioVector((const signalVector&) emptyVector,
+  mEmptyTransmitBurst = new radioVector((const charVector&) emptyVector,
                                         (UMTS::Time&) emptyTime);
 }
 
@@ -177,7 +177,7 @@ void Transceiver::stop()
   LOG(NOTICE) << "Transceiver stopped";
 }
 
-void Transceiver::addRadioVector(signalVector &burst, UMTS::Time &wTime)
+void Transceiver::addRadioVector(charVector &burst, UMTS::Time &wTime)
 {
   // modulate and stick into queue 
   radioVector *vec = new radioVector(burst, wTime);
@@ -330,13 +330,12 @@ bool Transceiver::driveTransmitPriorityQueue()
   for (int i = 0; i < 2; i++)
     frameNum = (frameNum << 8) | (0x0ff & buffer[i + 1]);
 
-  static signalVector newBurst(UMTS::gSlotLen);
-  signalVector::iterator itr = newBurst.begin();
+  static charVector newBurst(UMTS::gSlotLen);
+  charVector::iterator itr = newBurst.begin();
   signed char *bufferItr = (signed char *) (buffer + 3);
 
   while (itr < newBurst.end()) {
-    *itr++ = complex((float) *(bufferItr + 0),
-                     (float) *(bufferItr + 1));
+    *itr++ = complex8(*(bufferItr + 0), *(bufferItr + 1));
     bufferItr++;
     bufferItr++;
   }

@@ -322,7 +322,7 @@ bool UHDDevice::open(const std::string &args, bool extref)
 		usrp_dev->set_clock_source("external");
 
 	/* Create TX and RX streamers */
-	uhd::stream_args_t stream_args("sc16");
+	uhd::stream_args_t stream_args("sc8", "sc8");
 	tx_stream = usrp_dev->get_tx_stream(stream_args);
 	rx_stream = usrp_dev->get_rx_stream(stream_args);
 
@@ -353,10 +353,10 @@ bool UHDDevice::flush_recv(size_t num_pkts)
 	size_t num_smpls, chans = 1;
 	float timeout = 0.5f;
 
-	std::vector<std::vector<short> >
-		pkt_bufs(chans, std::vector<short>(2 * rx_spp));
+	std::vector<std::vector<char> >
+		pkt_bufs(chans, std::vector<char>(2 * rx_spp));
 
-	std::vector<short *> pkt_ptrs;
+	std::vector<char *> pkt_ptrs;
 	for (size_t i = 0; i < pkt_bufs.size(); i++)
 		pkt_ptrs.push_back(&pkt_bufs[i].front());
 
@@ -502,8 +502,8 @@ int UHDDevice::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 	return 0;
 }
 
-int UHDDevice::readSamples(short *buf, int len, bool *overrun,
-			    long long timestamp, bool *underrun, unsigned *RSSI)
+int UHDDevice::readSamples(char *buf, int len, bool *overrun,
+			   long long timestamp, bool *underrun, unsigned *RSSI)
 {
 	ssize_t rc;
 	uhd::time_spec_t timespec;
@@ -580,8 +580,8 @@ int UHDDevice::readSamples(short *buf, int len, bool *overrun,
 	return len;
 }
 
-int UHDDevice::writeSamples(short *buf, int len,
-			     bool *underrun, long long ts)
+int UHDDevice::writeSamples(char *buf, int len,
+			    bool *underrun, long long ts)
 {
 	uhd::tx_metadata_t metadata;
 	metadata.has_time_spec = true;

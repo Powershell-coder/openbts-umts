@@ -28,7 +28,7 @@
 #define DEFAULT_MAX_DELAY         50
 
 /* Sample rate for all devices */
-#define DEVICE_RATE               6.25e6
+#define DEVICE_RATE               3.84e6
 
 ConfigurationKeyMap getConfigurationKeys2();
 ConfigurationTable gConfig("/etc/OpenBTS/OpenBTS-UMTS.db",

@@ -35,7 +35,7 @@ class RadioDevice {
         @param RSSI The received signal strength of the read result
         @return The number of samples actually read
   */
-  virtual int readSamples(short *buf, int len, bool *overrun,
+  virtual int readSamples(char *buf, int len, bool *overrun,
                           long long timestamp, bool *underrun,
                           unsigned *RSSI=NULL)=0;
   /**
@@ -47,7 +47,7 @@ class RadioDevice {
         @param isControl Set if data is a control packet, e.g. a ping command
         @return The number of samples actually written
   */
-  virtual int writeSamples(short *buf, int len, bool *underrun,
+  virtual int writeSamples(char *buf, int len, bool *underrun,
                            long long timestamp)=0;
 
   /** Set the transmitter frequency */

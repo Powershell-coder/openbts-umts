@@ -41,7 +41,7 @@ extern "C" {
  * clocking with downsampling by 4.
  */
 #define RESAMP_INRATE              384
-#define RESAMP_OUTRATE             625
+#define RESAMP_OUTRATE             384
 
 /*
  * Number of taps per resampler-RRC filter partitions
@@ -141,28 +141,10 @@ RadioInterface::~RadioInterface(void)
  */
 bool RadioInterface::init()
 {
-  dnsampler = new Resampler(RESAMP_INRATE, RESAMP_OUTRATE, RESAMP_TAP_LEN);
-  if (!dnsampler->init(Resampler::FILTER_TYPE_RRC,
-                       (float) RESAMP_INRATE / (float) RESAMP_OUTRATE)) {
-    LOG(ALERT) << "Rx resampler failed to initialize";
-    return false;
-  }
-
-  upsampler = new Resampler(RESAMP_OUTRATE, RESAMP_INRATE, RESAMP_TAP_LEN);
-  if (!upsampler->init(Resampler::FILTER_TYPE_RRC)) {
-    LOG(ALERT) << "Tx resampler failed to initialize";
-    return false;
-  }
-
-  outerSendBuffer = new signalVector(NUMCHUNKS * outchunk);
-  innerRecvBuffer = new signalVector(NUMCHUNKS * inchunk);
+  innerRecvBuffer = new charVector(NUMCHUNKS * inchunk);
 
   /* Buffers that feed the resampler require filter length headroom */
-  innerSendBuffer = new signalVector(NUMCHUNKS * inchunk + upsampler->len());
-  outerRecvBuffer = new signalVector(outchunk + dnsampler->len());
-
-  convertSendBuffer = new short[outerSendBuffer->size() * 2];
-  convertRecvBuffer = new short[outerRecvBuffer->size() * 2];
+  innerSendBuffer = new charVector(NUMCHUNKS * inchunk);
 
   return true;
 }
@@ -244,63 +226,34 @@ int RadioInterface::setPowerAttenuation(int atten)
   return atten;
 }
 
-int RadioInterface::radioifyVector(signalVector &wVector,
-                                   float *retVector, bool zero)
+int RadioInterface::radioifyVector(charVector &in, char *out, bool zero)
 {
   if (zero)
-    memset(retVector, 0, wVector.size() * sizeof(Complex<float>));
+    memset(out, 0, in.size() * sizeof(Complex<char>));
   else
-    memcpy(retVector, wVector.begin(), wVector.size() * sizeof(Complex<float>));
+    memcpy(out, in.begin(), in.size() * sizeof(Complex<char>));
 
-  return wVector.size();
+  return in.size();
 }
 
-void RadioInterface::unRadioifyVector(float *floatVector,
-                                      signalVector& newVector)
+void RadioInterface::unRadioifyVector(char *in, charVector& out)
 {
-  memcpy(newVector.begin(), floatVector,
-         newVector.size() * sizeof(Complex<float>));
+  memcpy(out.begin(), in, out.size() * sizeof(Complex<char>));
 }
 
 bool RadioInterface::pushBuffer(void)
 {
-  int rc, chunks;
-  int inner_len, outer_len;
-
   if (sendCursor < inchunk)
     return true;
   if (sendCursor > innerSendBuffer->size()) {
     LOG(ALERT) << "Send buffer overflow";
   }
 
-  chunks = sendCursor / inchunk;
-  inner_len = chunks * inchunk;
-  outer_len = chunks * outchunk;
-
-  /* Input from the buffer with number of taps length headroom */
-  float *resamp_in = (float *) (innerSendBuffer->begin() + upsampler->len());
-  float *resamp_out = (float *) outerSendBuffer->begin();
-
-  rc = upsampler->rotate(resamp_in, inner_len, resamp_out, outer_len);
-  if (rc < 0) {
-    LOG(ALERT) << "Sample rate downsampling error";
-    return false;
-  }
-
-  convert_float_short(convertSendBuffer,
-                      (float *) outerSendBuffer->begin(),
-                      powerScaling, outer_len * 2);
-
-  mRadio->writeSamples(convertSendBuffer, outer_len,
+  mRadio->writeSamples((char *) innerSendBuffer->begin(), sendCursor,
                        &underrun, writeTimestamp);
 
-  /* Shift remaining samples to beginning of buffer */
-  memmove(innerSendBuffer->begin() + upsampler->len(),
-          innerSendBuffer->begin() + upsampler->len() + inner_len,
-          (sendCursor - inner_len) * 2 * sizeof(float));
-
-  writeTimestamp += outer_len;
-  sendCursor -= inner_len;
+  writeTimestamp += sendCursor;
+  sendCursor = 0;
 
   return true;
 }
@@ -315,47 +268,29 @@ static int detectClipping(float *buf, int len, float thresh)
 	return 0;
 }
 
-bool RadioInterface::pullBuffer(void)
+bool RadioInterface::pullBuffer()
 {
   bool localUnderrun;
 
-  if (recvCursor > innerRecvBuffer->size() - inchunk)
-    return true;
+  if (recvCursor) {
+    LOG(ALERT) << "recvCursor not zero";
+  }
+
+  size_t len = UMTS::gSlotLen;
 
   /* Outer buffer access size is fixed */
-  size_t num_recv = mRadio->readSamples(convertRecvBuffer,
-                                        outchunk,
+  size_t num_recv = mRadio->readSamples((char *) innerRecvBuffer->begin(),
+                                        len,
                                         &overrun,
                                         readTimestamp,
                                         &localUnderrun);
-  if (num_recv != outchunk) {
+  if (num_recv != len) {
     LOG(ALERT) << "Receive error " << num_recv;
     return false;
   }
 
-  short *convert_in = convertRecvBuffer;
-  float *convert_out = (float *) (outerRecvBuffer->begin() + dnsampler->len());
-
-  convert_short_float(convert_out, convert_in, CONVERT_RX_SCALE, outchunk * 2);
-  if (detectClipping(convert_out, outchunk * 2, CLIP_THRESH)) {
-    LOG(ALERT) << "Overpower detected on receive input";
-  }
-
-  underrun |= localUnderrun;
-  readTimestamp += outchunk;
-
-  /* Write to the end of the inner receive buffer */
-  float *resamp_in = (float *) (outerRecvBuffer->begin() + dnsampler->len());
-  float *resamp_out = (float *) (innerRecvBuffer->begin() + recvCursor);
-
-  int rc = dnsampler->rotate(resamp_in, outchunk,
-                             resamp_out, inchunk);
-  if (rc < 0) {
-    LOG(ALERT) << "Sample rate upsampling error";
-    return false;
-  }
-
-  recvCursor += inchunk;
+  recvCursor = len;
+  readTimestamp += len;
 
   return true;
 }
@@ -370,17 +305,13 @@ bool RadioInterface::tuneRx(double freq)
   return mRadio->setRxFreq(freq);
 }
 
-void RadioInterface::driveTransmitRadio(signalVector &radioBurst,
+void RadioInterface::driveTransmitRadio(radioVector &radioBurst,
                                         bool zeroBurst)
 {
   if (!mOn)
     return;
 
-  /* Buffer write position */
-  float *pos = (float *) (innerSendBuffer->begin() +
-                          upsampler->len() + sendCursor);
-
-  radioifyVector(radioBurst, pos, zeroBurst);
+  radioifyVector(radioBurst, (char *) innerSendBuffer->begin(), zeroBurst);
 
   sendCursor += radioBurst.size();
   pushBuffer();
@@ -391,6 +322,8 @@ void RadioInterface::driveReceiveRadio(int guardPeriod)
   if (!mOn)
     return;
 
+  int vecSz = UMTS::gSlotLen + guardPeriod;
+
   pullBuffer();
 
   UMTS::Time recvClock = mClock.get();
@@ -400,8 +333,7 @@ void RadioInterface::driveReceiveRadio(int guardPeriod)
 
   // while there's enough data in receive buffer, form received 
   //    UMTS bursts and pass up to Transceiver
-  int vecSz = symbolsPerSlot + guardPeriod;
-  while (recvSz > vecSz) {
+  while (recvSz >= symbolsPerSlot) {
     UMTS::Time tmpTime = recvClock;
     mClock.incTN();
     recvClock.incTN();
@@ -410,7 +342,7 @@ void RadioInterface::driveReceiveRadio(int guardPeriod)
       radioVector *rxBurst = new radioVector(vecSz, tmpTime);
       memcpy(rxBurst->begin(),
              innerRecvBuffer->begin() + readSz,
-             rxBurst->size() * sizeof(Complex<float>));
+             rxBurst->size() * sizeof(Complex<char>));
 
       mReceiveFIFO.put(rxBurst);
     }
@@ -419,12 +351,8 @@ void RadioInterface::driveReceiveRadio(int guardPeriod)
     recvSz -= symbolsPerSlot;
   }
 
+  recvCursor = 0;
+
   if (!readSz)
     return;
-
-  memmove(innerRecvBuffer->begin(),
-          innerRecvBuffer->begin() + readSz,
-          (recvCursor - readSz) * sizeof(Complex<float>));
-
-  recvCursor -= readSz;
 }
